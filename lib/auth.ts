@@ -17,14 +17,17 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, account }) {
       // When user signs in, store Google's access_token
-      if (account?.access_token) {
-        token.access_token = account.access_token;  // ⭐ corrected
+      if (account) {
+        token.accessToken = account.access_token; 
       }
       return token;
     },
+
     async session({ session, token }) {
       // Expose access_token to the client + API routes
-      session.access_token = token.access_token as string | undefined; // ⭐ corrected
+      if (typeof token.accessToken === "string") {
+        session.accessToken = token.accessToken;
+      }
       return session;
     },
   },

@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   }
 
   // FIX: NextAuth stores the access token here
-  const accessToken = (session as any).access_token as string | undefined;
+  const accessToken = (session as any).accessToken;
 
   console.log("GOOGLE ACCESS TOKEN:", accessToken);
 
