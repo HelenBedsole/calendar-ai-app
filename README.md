@@ -1,20 +1,20 @@
 # AI Google Calendar Assistant
 
-This is a Next.js project bootstrapped with create-next-app.
+An AI-powered Google Calendar automation system built using n8n and a Next.js frontend, packaged in a fully reproducible Docker environment.
 
 ## 1) Executive Summary
 
 ### Problem
-Managing calendars is tedious: writing descriptions, keeping events organized, and syncing information across tools takes time.
+Busy students and professionals rely heavily on digital calendars, yet the process of manually adding events, writing descriptions, and keeping entries organized is slow and error-prone. Many people want an automated assistant that handles repetitive scheduling tasks for them without needing to learn complicated tools.
 
 ### Solution
-This project provides an AI-powered Google Calendar automation system built on n8n, paired with a lightweight Next.js frontend. The workflow adds events to your Google Calendar automatically using an LLM.
+This project provides an AI-driven Google Calendar Assistant built on n8n agentic workflows. The workflow automatically generates and adds calendar events using natural language inputs, with optional summarization and enhancement by an LLM. A lightweight Next.js interface supports interaction and testing, while Docker guarantees reproducible builds and deployment. The result is a fully automated, containerized system for intelligent calendar management.
 
 ## 2) System Overview
 
 ### Course Concepts Used
-- N8N Agentic Workflows
-- Cloud Services / APIs / Containers
+- N8N Agentic Workflows: Used to orchestrate multi-step tasks: LLM prompting, Google Calendar API calls, credential handling, and error recovery.
+- Cloud Services / APIs / Containers: Ensures the entire application builds and runs identically on any machine, fulfilling the reproducibility requirement.
 
 ### Architecture Diagram
 ![](/assets/workflow.png).
@@ -22,10 +22,11 @@ This project provides an AI-powered Google Calendar automation system built on n
 ### Data / Models / Services
 | Component | Description |
 |----------|-------------|
-| Google Calendar Events | Titles, times, descriptions |
-| AI Model | Generates summaries |
-| n8n Workflow | Orchestrates automation |
-| Next.js App | Optional UI |
+| Google Calendar API | Reads/writes events through OAuth-authenticated operations |
+| AI Model | Transforms user inputs into structured event data |
+| n8n Workflow | Core automation pipeline: receives inputs, generates event metadata, writes to calendar |
+| Next.js App | Provides optional UI for triggering or testing workflow behavior |
+| Docker Container | Reproducible environment that runs Next.js in production mode |
 
 ## 3) How to Run (Local)
 
@@ -34,55 +35,91 @@ This project provides an AI-powered Google Calendar automation system built on n
 npm install
 npm run dev
 ```
+Then open: [](http://localhost:3000)
 
-### n8n Workflow
+### n8n Workflow Setup
 
 #### What It Is
-This workflow automates Google Calendar tasks such as:
-- Generating new calendar events
-- Summarizing event details (WIP)
-- Syncing updates back into Google Calendar (WIP)
+The workflow imports directly into n8n and handles:
+- Natural-language event creation
+- Event summarization (WIP)
+- Event update syncing (WIP)
 
 #### Quick Start (Minimal Setup)
 1. Launch n8n (cloud or self-hosted).
 2. Import `AI Google Calendar Assistant (Fixed).json`: Workflows → Import → Import from File
 3. Add required credentials: Google Calendar API, AI API (OpenAI, Gemini, etc.)
-4. Replace placeholder calendar IDs and config values.
-5. Run manually or connect triggers.
+4. Replace placeholder calendar IDs / keys.
+5. Run manually or attach a trigger (webhook, schedule, etc.).
+
+### Docker (Reproducible One-Command Run)
+This project includes a production Dockerfile.
+
+#### One Command Build + Run
+
+```bash
+docker build -t calendar-ai:latest . && docker run --rm -p 3000:3000 --env-file .env calendar-ai:latest
+```
 
 ## 4) Design Decisions
 #### Why n8n?
-n8n offers a clean, visual, modular way to build automation pipelines. It integrates seamlessly with Google’s APIs and AI models without writing a heavy backend service.
+n8n enables low-code orchestration of multi-step workflows involving API calls, authentication, error handling, and LLM processing. This aligns directly with the Workflow Automation competency from the course and reduces backend complexity.
+
+Alternatives Considered
+- Custom Node backend: more control, but significantly more boilerplate for OAuth, scheduling, and retries.
+- Google Apps Script: limited flexibility and harder to integrate with LLM APIs.
+- Direct client-side API calls: insecure for OAuth tokens.
 
 Tradeoffs
-- n8n adds some overhead compared to a raw script.
-- Requires external AI API calls (rate-limits, latency).
-- Debugging workflows can be slower than code-based logging.
+- n8n introduces overhead compared to hand-written scripts.
+- Workflow debugging is sometimes slower than code-level debugging.
+- LLM steps add cost and latency.
 
 Security & Privacy
-- No secrets stored in the repo; .env handles API keys.
-- OAuth credentials stored securely within n8n.
-- AI receives only necessary event metadata (no sensitive PII).
+- No secrets committed to the repository; .env handles all sensitive variables.
+- OAuth tokens remain inside n8n’s encrypted credential layer.
+- AI receives only minimal metadata required for summarization.
+
+Ops Considerations
+- n8n provides built-in logs for each workflow execution.
+- Failures trigger retry logic where needed (e.g., Google Calendar rate limits).
+- Docker ensures consistent Node.js versioning and build output with Next.js.
+- Application can scale horizontally by running multiple containers behind a load balancer.
 
 ## 5) Results & Evaluation
+
 ### What Works
 
-- Natural-language event creation (“Schedule lunch with John tomorrow at 1 PM”)
-- UI interaction via Next.js
-- Import-and-run reproducible workflow JSON
+✔ Natural-language event creation
+✔ Reproducible workflow import
+✔ Successful Google Calendar writes
+✔ Fully Dockerized Next.js frontend
+✔ Build success across clean environments (verified via Docker)
+
+### Example Output
+
+```json
+{
+  "eventCreated": true,
+  "title": "Lunch with John",
+  "start": "2025-01-05T13:00:00",
+  "description": "Lunch meeting generated by AI Assistant."
+}
+```
+
+### Validation & Testing
+
+- Smoke tests performed by importing workflow into a clean n8n instance and triggering event generation.
+- Verified correct OAuth handling and Google Calendar write access.
+- Tested failure cases including missing scopes and invalid time formats.
 
 ### What's Next
 
-- Event fetching & updating with Google Calendar API
-- Event deletion and reomval process 
+Planned improvements:
 
-Validation & Testing
-
-Smoke tests confirm workflow import and execution.
-
-Manual tests performed with sample calendars.
-
-Verified proper authentication and event update behavior.
+- Add event update/delete functionality
+- Real-time event syncing via webhooks
+- Daily automated digest emails
 
 ## 7) Links
-GitHub Repo: <INSERT URL>
+GitHub Repo: [](https://github.com/HelenBedsole/calendar-ai-app)
