@@ -17,7 +17,7 @@ This project provides an AI-powered Google Calendar automation system built on n
 - Cloud Services / APIs / Containers
 
 ### Architecture Diagram
-`/assets/architecture.png`.
+![](/assets/workflow.png).
 
 ### Data / Models / Services
 | Component | Description |
