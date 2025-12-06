@@ -35,7 +35,6 @@ This project provides an AI-driven Google Calendar Assistant built on n8n agenti
 npm install
 npm run dev
 ```
-Then open: [](http://localhost:3000)
 
 ### n8n Workflow Setup
 
@@ -101,10 +100,15 @@ Ops Considerations
 ### What Works
 
 ✔ Natural-language event creation
+
 ✔ Reproducible workflow import
+
 ✔ Successful Google Calendar writes
+
 ✔ Fully Dockerized Next.js frontend
+
 ✔ Build success across clean environments (verified via Docker)
+
 
 ### Example Output
 
@@ -132,4 +136,4 @@ Planned improvements:
 - Daily automated digest emails
 
 ## 7) Links
-GitHub Repo: [](https://github.com/HelenBedsole/calendar-ai-app)
+GitHub Repo: [][https://github.com/HelenBedsole/calendar-ai-app]
