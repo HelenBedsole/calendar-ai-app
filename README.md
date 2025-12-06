@@ -55,6 +55,15 @@ The workflow imports directly into n8n and handles:
 ### Docker (Reproducible One-Command Run)
 This project includes a production Dockerfile.
 
+#### Environment Setup
+This project includes a .env.example file with placeholder values.
+Before running the project, create your actual environment file:
+
+```bash
+cp .env.example .env
+```
+Then edit .env and fill in your real credentials (Google OAuth + AI API keys).
+
 #### One Command Build + Run
 
 ```bash
