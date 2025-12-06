@@ -1,0 +1,397 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "functionCode": "let output = $json.output;\n\n// Strip code fences like ```json or ```\noutput = output.replace(/```json/gi, '').replace(/```/g, '').trim();\n\nconst parsed = JSON.parse(output);\n\nreturn {\n  ...$json,\n  ...parsed,\n};"
+      },
+      "id": "eab4d440-6e3d-4ac5-bfa9-312d7698906f",
+      "name": "Parse Output",
+      "type": "n8n-nodes-base.functionItem",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.action }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "create_event"
+            },
+            {
+              "value2": "delete",
+              "output": 1
+            },
+            {
+              "value2": "list",
+              "output": 2
+            }
+          ]
+        }
+      },
+      "id": "a81be724-c73c-4cbf-ac9b-7f463ac372d3",
+      "name": "Route Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [
+        140,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $node[\"Webhook\"].json.body.googleAccessToken }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"summary\": \"{{$json.summary}}\",\n  \"start\": {\n    \"dateTime\": \"{{$json.start}}\",\n    \"timeZone\": \"America/New_York\"\n  },\n  \"end\": {\n    \"dateTime\": \"{{$json.end}}\",\n    \"timeZone\": \"America/New_York\"\n  }\n}\n",
+        "options": {}
+      },
+      "id": "e1eb721f-97f5-4d2b-bf1a-5ed0d265b49f",
+      "name": "Create Event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        360,
+        20
+      ]
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "={{ `https://www.googleapis.com/calendar/v3/calendars/primary/events/${$json.eventId}` }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$json.googleAccessToken}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "58991004-7b56-4212-bc3f-23f09a7be5cb",
+      "name": "Delete Event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        360,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$json.googleAccessToken}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3ab2509c-2718-4ac4-9a1e-c8c742d5c8cb",
+      "name": "List Events",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        360,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "reply",
+              "value": "={{ $json.assistantReply || \"Done.\" }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "31b9fa8a-7542-4bcb-9d61-6bb1f4715bff",
+      "name": "Build Reply",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        600,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { reply: $json.reply } }}",
+        "options": {}
+      },
+      "id": "40b28588-eaa1-4d72-8a4b-df0da564d1e1",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        820,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "41b3a933-332a-4eb6-ba38-ba48e2e4e1b9",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Month name → number\nconst monthMap = {\n  january: 1, february: 2, march: 3, april: 4,\n  may: 5, june: 6, july: 7, august: 8,\n  september: 9, october: 10, november: 11, december: 12\n};\n\n// -------------------------------\n// Determine month (string or number)\n// -------------------------------\nlet month;\n\nif (typeof $json.month === \"number\") {\n  // Already numeric\n  month = $json.month;\n\n} else if (typeof $json.month === \"string\") {\n  const m = $json.month.trim();\n\n  // Is it a numeric string?  e.g. \"12\"\n  if (/^\\d+$/.test(m)) {\n    month = parseInt(m, 10);\n  } else {\n    // Month name case\n    month = monthMap[m.toLowerCase()];\n    if (!month) throw new Error(\"Invalid month name: \" + $json.month);\n  }\n\n} else {\n  throw new Error(\"Missing month value\");\n}\n\n// -------------------------------\n// Extract other values\n// -------------------------------\nconst year = $json.year;\nconst day = $json.day;\n\nif (!year || !day) {\n  throw new Error(\"Year or day missing.\");\n}\n\nconst startTime = $json.startTime.trim().toLowerCase();\nconst endTime = $json.endTime.trim().toLowerCase();\n\n// -------------------------------\n// Convert 12-hour time → 24-hour\n// -------------------------------\nfunction to24h(timeString) {\n  const match = timeString.match(/(\\d{1,2})(?::(\\d{2}))?\\s*(am|pm)/i);\n  if (!match) throw new Error(\"Invalid time: \" + timeString);\n\n  let [_, hourStr, minStr, period] = match;\n  let hour = parseInt(hourStr, 10);\n  let minutes = minStr ? parseInt(minStr, 10) : 0;\n  period = period.toLowerCase();\n\n  if (period === \"pm\" && hour < 12) hour += 12;\n  if (period === \"am\" && hour === 12) hour = 0;\n\n  return `${String(hour).padStart(2, \"0\")}:${String(minutes).padStart(2, \"0\")}`;\n}\n\nconst start24 = to24h(startTime);\nconst end24 = to24h(endTime);\n\n// -------------------------------\n// Build ISO string (EST time)\n// -------------------------------\nfunction buildISO(y, m, d, hhmm) {\n  return `${y}-${String(m).padStart(2,\"0\")}-${String(d).padStart(2,\"0\")}T${hhmm}:00-05:00`;\n}\n\n// -------------------------------\n// Final return object\n// -------------------------------\nreturn {\n  action: $json.action,\n  summary: $json.summary,\n  start: buildISO(year, month, day, start24),\n  end: buildISO(year, month, day, end24),\n  assistantReply: $json.assistantReply\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -200,
+        180
+      ],
+      "id": "15fd3012-984f-422e-9ed2-906a5322bfd4",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "calendar-bot",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -900,
+        180
+      ],
+      "id": "3c997797-0378-4f73-ad19-b2867552c4d6",
+      "name": "Webhook",
+      "webhookId": "9a8b767d-4b54-4ff2-b036-dc47f7b74242"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.message }}",
+        "options": {
+          "systemMessage": "=When you extract dates and times from a user’s message, you must not convert them into ISO format. Instead, you always need to output them inside a structured JSON object that contains these fields: action, summary, year, month, day, startTime, endTime, and assistantReply.\n\nYour entire response must consist only of this JSON object. You cannot use code blocks, Markdown, explanations, or any text outside the JSON.\n\nYou must always include all of the listed fields in your response.\n\nIf the user gives you a complete date using numbers or a month name (for example, “December 5th 2025”), you must use that exact date.\n\nIf the user gives a weekday (like “Friday”) without an exact date, you must figure out the next upcoming date for that weekday, based on today’s date, and use that.\n\nIf a message includes both a weekday and a numeric date, you must always trust and use the numeric date.\n\nTimes must stay in 12-hour am/pm format. For example, “7–8pm” becomes startTime “7pm” and endTime “8pm”.\n\nThe assistantReply field should contain a short confirmation message.\n\nOnly the JSON object described earlier should be returned—nothing else."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        -700,
+        200
+      ],
+      "id": "de810309-174a-44ee-bfa8-b74de413257c",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-pro-latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -680,
+        420
+      ],
+      "id": "f20cabba-ae37-4999-82bb-b18940c1ebf9",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "aQMVPuMhCqOrYWDI",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Parse Output": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Action": {
+      "main": [
+        [
+          {
+            "node": "Create Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Delete Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "List Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Event": {
+      "main": [
+        [
+          {
+            "node": "Build Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Event": {
+      "main": [
+        [
+          {
+            "node": "Build Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Events": {
+      "main": [
+        [
+          {
+            "node": "Build Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Reply": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Route Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "cbea3768-7224-471c-96e4-391f593be5e9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7ad74f3f50048d69481889be96a10f870abf75b3a1039775791ad3a6ccb2babe"
+  },
+  "id": "SokVXSLtd6DTzSV7",
+  "tags": []
+}
