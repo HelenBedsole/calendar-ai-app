@@ -1,0 +1,396 @@
+{
+  "name": "AI Google Calendar Assistant (Fixed)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "calendar-bot",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "ff488f27-64f8-42b4-90c0-d0a1045baebb",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2288,
+        -80
+      ],
+      "webhookId": "19844f87-d304-4c3d-a44b-90781262cc47"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.message }}",
+        "options": {
+          "systemMessage": "When extracting dates and times, NEVER convert them to ISO format.\n\nYou MUST always output a structured JSON object in the following shape:\n\n{\n  \"action\": \"create\",\n  \"summary\": \"ABC Meeting\",\n  \"year\": 2025,\n  \"month\": \"December\",\n  \"day\": 5,\n  \"startTime\": \"7pm\",\n  \"endTime\": \"8pm\",\n  \"assistantReply\": \"Okay! I've scheduled your meeting.\"\n}\n\nREQUIRED RULES:\n\n1. Your ENTIRE response MUST be valid JSON only.\n   - NO code blocks\n   - NO ```json or ``` fencing\n   - NO Markdown\n   - NO explanations, no text outside the JSON.\n\n2. You MUST always return all of these fields:\n   - action\n   - summary\n   - year\n   - month\n   - day\n   - startTime\n   - endTime\n   - assistantReply\n\n3. If the user gives a full numeric date (e.g., “December 5th 2025”), ALWAYS use it.\n\n4. If the user gives a weekday (e.g., “Friday”) with NO exact date:\n   - You MUST compute the next upcoming calendar date.\n   - Use today’s date as the reference point.\n   - Always return real values for year, month, and day. Never null.\n\n5. If BOTH a numeric date and a weekday appear:\n   - ALWAYS trust the numeric date.\n\n6. Times must stay in 12-hour format with am/pm.\n   - “7–8pm” → startTime: \"7pm\", endTime: \"8pm\"\n\n7. The field “assistantReply” should be a short helpful confirmation message.\n\nOnly return the JSON object described above — nothing else.\n"
+        }
+      },
+      "id": "d627d700-de24-4718-8675-46aa963fcaf4",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -2112,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "4233f87e-ba31-4139-9329-be0fad903bbe",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -2064,
+        160
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "1Eu4wjsjHuMPZCYO",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "let output = $json.output;\n\n// Strip code fences like ```json or ```\noutput = output.replace(/```json/gi, '').replace(/```/g, '').trim();\n\nconst parsed = JSON.parse(output);\n\nreturn {\n  ...$json,\n  ...parsed,\n};"
+      },
+      "id": "74a47faf-86ed-479d-b2f5-cdf82691dc91",
+      "name": "Parse Output",
+      "type": "n8n-nodes-base.functionItem",
+      "typeVersion": 1,
+      "position": [
+        -1744,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.action }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "create"
+            },
+            {
+              "value2": "delete",
+              "output": 1
+            },
+            {
+              "value2": "list",
+              "output": 2
+            }
+          ]
+        }
+      },
+      "id": "c371136e-1690-4944-80ad-b1be73560a70",
+      "name": "Route Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [
+        -1216,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $node[\"Webhook\"].json.body.googleAccessToken }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"summary\": \"{{$json.summary}}\",\n  \"start\": {\n    \"dateTime\": \"{{$json.start}}\",\n    \"timeZone\": \"America/New_York\"\n  },\n  \"end\": {\n    \"dateTime\": \"{{$json.end}}\",\n    \"timeZone\": \"America/New_York\"\n  }\n}\n",
+        "options": {}
+      },
+      "id": "739d4b84-dfa0-4c32-b3a3-bae588c903c2",
+      "name": "Create Event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        -992,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "={{ `https://www.googleapis.com/calendar/v3/calendars/primary/events/${$json.eventId}` }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$json.googleAccessToken}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1af3c798-852e-40a7-b92c-5248ac20208c",
+      "name": "Delete Event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        -992,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$json.googleAccessToken}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3bfd7823-26d3-4889-adde-02592bfc396c",
+      "name": "List Events",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        -992,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "reply",
+              "value": "={{ $json.assistantReply || \"Done.\" }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "da312421-2711-46dd-bef0-8343c364709d",
+      "name": "Build Reply",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        -752,
+        -32
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { reply: $json.reply } }}",
+        "options": {}
+      },
+      "id": "103707fe-fb92-42a8-a9d6-73ac43fa9987",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -528,
+        -32
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1344,
+        -256
+      ],
+      "id": "c2c0736f-7b1b-41df-894c-f8e5af264e7b",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Month name → number\nconst monthMap = {\n  january: 1, february: 2, march: 3, april: 4,\n  may: 5, june: 6, july: 7, august: 8,\n  september: 9, october: 10, november: 11, december: 12\n};\n\n// Read values directly from $json (because Parse Output flattened them)\nconst year = $json.year;\nconst month = monthMap[$json.month.toLowerCase()];\nconst day = $json.day;\n\nconst startTime = $json.startTime.toLowerCase();\nconst endTime = $json.endTime.toLowerCase();\n\n// Convert \"6pm\" → \"18:00\"\nfunction to24h(timeString) {\n  const match = timeString.match(/(\\d{1,2})(?::(\\d{2}))?\\s*(am|pm)/i);\n  if (!match) throw new Error(\"Invalid time: \" + timeString);\n\n  let hour = parseInt(match[1]);\n  const minutes = match[2] ? parseInt(match[2]) : 0;\n  const period = match[3].toLowerCase();\n\n  if (period === \"pm\" && hour < 12) hour += 12;\n  if (period === \"am\" && hour === 12) hour = 0;\n\n  return `${String(hour).padStart(2,\"0\")}:${String(minutes).padStart(2,\"0\")}`;\n}\n\nconst start24 = to24h(startTime);\nconst end24 = to24h(endTime);\n\n// Build ISO datetime string in EST (New York)\nfunction buildISO(y, m, d, hhmm) {\n  return `${y}-${String(m).padStart(2,\"0\")}-${String(d).padStart(2,\"0\")}T${hhmm}:00-05:00`;\n}\n\nreturn {\n  action: $json.action,\n  summary: $json.summary,\n  start: buildISO(year, month, day, start24),\n  end: buildISO(year, month, day, end24),\n  assistantReply: $json.assistantReply\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1536,
+        -80
+      ],
+      "id": "1191ec9b-3521-459b-ab6b-b41026103403",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Output": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Action": {
+      "main": [
+        [
+          {
+            "node": "Create Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Delete Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "List Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Event": {
+      "main": [
+        [
+          {
+            "node": "Build Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Event": {
+      "main": [
+        [
+          {
+            "node": "Build Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Events": {
+      "main": [
+        [
+          {
+            "node": "Build Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Reply": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Route Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "f5ee3923-fd6b-42b8-9588-e47f50f1a013",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c65c12d55420526fe7a4a90ad437af674c4cdd41566b2cc51b28a0ad5c4e343e"
+  },
+  "id": "14YnZPycFnWyw6AF",
+  "tags": []
+}
