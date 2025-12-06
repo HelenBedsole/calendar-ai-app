@@ -136,4 +136,4 @@ Planned improvements:
 - Daily automated digest emails
 
 ## 7) Links
-GitHub Repo: [LINK][https://github.com/HelenBedsole/calendar-ai-app]
+GitHub Repo: [LINK](https://github.com/HelenBedsole/calendar-ai-app)
