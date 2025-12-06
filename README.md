@@ -46,7 +46,7 @@ The workflow imports directly into n8n and handles:
 
 #### Quick Start (Minimal Setup)
 1. Launch n8n (cloud or self-hosted).
-2. Import `AI Google Calendar Assistant (Fixed).json`: Workflows → Import → Import from File
+2. Import `My_workflow.json`: Workflows → Import → Import from File
 3. Add required credentials: Google Calendar API, AI API (OpenAI, Gemini, etc.)
 4. Replace placeholder calendar IDs / keys.
 5. Run manually or attach a trigger (webhook, schedule, etc.).
