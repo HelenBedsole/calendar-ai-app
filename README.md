@@ -79,6 +79,7 @@ Security & Privacy
 - No secrets committed to the repository; .env handles all sensitive variables.
 - OAuth tokens remain inside n8n’s encrypted credential layer.
 - AI receives only minimal metadata required for summarization.
+- Because events may include sensitive information, users should avoid sending full private descriptions to the AI model unless using a provider they trust.
 
 Ops Considerations
 - n8n provides built-in logs for each workflow execution.
