@@ -139,3 +139,6 @@ Planned improvements:
 
 ## 7) Links
 GitHub Repo: [LINK](https://github.com/HelenBedsole/calendar-ai-app)
+Varcel Cloud Deployment: [LINK](https://calendar-ai-app-seven.vercel.app)
+
+Note: n8n Cloud services used during deployment.
