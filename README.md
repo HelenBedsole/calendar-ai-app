@@ -30,7 +30,7 @@ This project provides an AI-driven Google Calendar Assistant built on n8n agenti
 
 ## 3) How to Run (Local)
 
-### Next.js App
+### Option 1: Next.js App
 ```bash
 npm install
 npm run dev
@@ -53,7 +53,7 @@ The workflow imports directly into n8n and handles:
 4. Replace placeholder calendar IDs / keys.
 5. Run manually or attach a trigger (webhook, schedule, etc.).
 
-### Docker (Reproducible One-Command Run)
+### Option 2: Docker (Reproducible One-Command Run)
 This project includes a production Dockerfile.
 
 #### Environment Setup
